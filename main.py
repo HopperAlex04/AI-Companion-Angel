@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from providers import MockProvider, LlamaCPPProvider
-import requests
 
 app = FastAPI()
 mock = MockProvider()
