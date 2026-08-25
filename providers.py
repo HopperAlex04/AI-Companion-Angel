@@ -36,6 +36,7 @@ class LlamaCPPProvider(ModelProvider):
             self.add_message(prompt.conversation_id, "user", prompt.prompt_text)
         else:
             conversation = self.convert_conv(self.retrieve_conversation(prompt.conversation_id))
+            print(conversation)
             conversation.append({"role": "user", "content": prompt.prompt_text})
             self.add_message(prompt.conversation_id, "user", prompt.prompt_text)
         response = requests.post(
@@ -54,17 +55,20 @@ class LlamaCPPProvider(ModelProvider):
 
     def retrieve_conversation(self, conv_id: int) -> list[tuple[str, str]]:
         # Grabs all messages, sorted by id, that belong to a conversation
-        rows = self.conn.execute("select role, content from messages where conv_id = ? order by id", (conv_id,)).fetchall()
+        rows = self.conn.execute("select role, content from messages where conversation_id = ? order by id", (conv_id,)).fetchall()
         return rows
 
     def add_message(self, conv_id: int, role: str, content: str) -> None:
         # Add a message to a specified conversation by adding an entry to the messages table
-        self.conn.execute("INSERT INTO messages (role, content, conv_id) values (?,?,?)", (role, content, conv_id,))
+        self.conn.execute("INSERT INTO messages (role, content, conversation_id) values (?,?,?)", (role, content, conv_id,))
+        self.conn.commit()
 
     def add_conversation(self, title: str) -> int:
         # Add new conversation, use default time
         cursor = self.conn.execute("INSERT INTO conversations (title) VALUES (?) RETURNING id", (title,))
-        return cursor.fetchone()[0]
+        con_id = cursor.fetchone()[0]
+        self.conn.commit()
+        return con_id
 
     def conversation_exists(self, conv_id: int) -> bool:
         # Check if a conversation with the given ID exists

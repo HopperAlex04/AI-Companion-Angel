@@ -9,6 +9,10 @@ For detailed documentation and interactive usage of the API, visit the FastAPI d
 
 [existing content]
 
+# Run app (with ollama server running)
+uvicorn main:app --reload
+
+
 ## API Usage Instructions
 
 To interact with the API using `curl`, you can use the following command as a starting point:
