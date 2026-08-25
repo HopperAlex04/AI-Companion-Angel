@@ -53,3 +53,8 @@ class LlamaCPPProvider(ModelProvider):
         # Add new conversation, use default time
         cursor = self.conn.execute("INSERT INTO conversations (title) VALUES (?) RETURNING id", (title,))
         return cursor.fetchone()[0]
+
+    def conversation_exists(self, conv_id: int) -> bool:
+        # Check if a conversation with the given ID exists
+        row = self.conn.execute("SELECT 1 FROM conversations WHERE id = ? LIMIT 1", (conv_id,)).fetchone()
+        return row is not None
