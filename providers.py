@@ -1,5 +1,7 @@
 from typing import override
 import requests
+from sqlite3 import Connection
+from main import PromptItem
 
 # import os
 # import json
@@ -9,20 +11,21 @@ SYSTEM_PROMPT = '''You are Angel, AI companion and research assistant.
 You are designed to aid the user in designing AI systems by searching documentation, finding bugs, providing analysis of planned features and proposing implementations when requested'''
 
 class ModelProvider:
-    def generate(self, prompt: str):
+    def generate(self, prompt: PromptItem):
         raise NotImplementedError("Subclasses must implement this method")
 
 class MockProvider(ModelProvider):
-    def generate(self, prompt: str):
-        return {"response": f"prompt recieved: {prompt}"}
+    def generate(self, prompt: PromptItem):
+        return {"response": f"prompt recieved: {prompt.prompt_text}"}
 
 class LlamaCPPProvider(ModelProvider):
-    def __init__(self):
+    def __init__(self, conn: Connection):
         self.conversation = [{"role": "system", "content": SYSTEM_PROMPT}]
+        self.conn = conn
 
     @override
-    def generate(self, prompt: str):
-        self.conversation.append({"role": "user", "content": prompt})
+    def generate(self, prompt: PromptItem):
+        self.conversation.append({"role": "user", "content": prompt.prompt_text})
         response = requests.post(
             "http://0.0.0.0:8080/v1/chat/completions",
             json={
@@ -36,3 +39,15 @@ class LlamaCPPProvider(ModelProvider):
         self.conversation.append({"role": "assistant", "content": assistant_message["content"]})
 
         return assistant_message["content"]
+
+    def retrieve_conversation(self, conv_id: int):
+        # Grabs all messages, sorted by id, that belong to a conversation
+        rows = self.conn.execute("select role, content from messages where conv_id = ? order by id", (conv_id,)).fetchall()
+
+    def add_message(self, conv_id:int, role:str, message:str):
+        # Add a meesage to a specified converstaion by adding an entry to the messages table
+        self.conn.execute("INSERT INTO messages (role, message, conv_id) values (?,?,?)", (role, message, conv_id,))
+
+    def add_conversation(self, title:str):
+        # Add new conversation, use default time
+        self.conn.execute("INSERT INTO conversations (title) values (?)", (title,))
