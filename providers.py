@@ -11,7 +11,7 @@ SYSTEM_PROMPT = '''You are Angel, AI companion and research assistant.
 You are designed to aid the user in designing AI systems by searching documentation, finding bugs, providing analysis of planned features and proposing implementations when requested'''
 
 class ModelProvider:
-    def generate(self, prompt: PromptItem):
+    def generate(self, prompt: PromptItem) -> str:
         raise NotImplementedError("Subclasses must implement this method")
 
 class MockProvider(ModelProvider):
@@ -24,7 +24,7 @@ class LlamaCPPProvider(ModelProvider):
         self.conn = conn
 
     @override
-    def generate(self, prompt: PromptItem):
+    def generate(self, prompt: PromptItem) -> str:
         # self.conversation.append({"role": "user", "content": prompt.prompt_text})
         conversation = []
         if not self.conversation_exists(prompt.conversation_id):
@@ -52,16 +52,16 @@ class LlamaCPPProvider(ModelProvider):
         self.add_message(prompt.conversation_id, "assistant", assistant_message["content"])
         return assistant_message["content"]
 
-    def retrieve_conversation(self, conv_id: int):
+    def retrieve_conversation(self, conv_id: int) -> list[tuple[str, str]]:
         # Grabs all messages, sorted by id, that belong to a conversation
         rows = self.conn.execute("select role, content from messages where conv_id = ? order by id", (conv_id,)).fetchall()
         return rows
 
-    def add_message(self, conv_id:int, role:str, content:str):
-        # Add a meesage to a specified converstaion by adding an entry to the messages table
+    def add_message(self, conv_id: int, role: str, content: str) -> None:
+        # Add a message to a specified conversation by adding an entry to the messages table
         self.conn.execute("INSERT INTO messages (role, content, conv_id) values (?,?,?)", (role, content, conv_id,))
 
-    def add_conversation(self, title:str):
+    def add_conversation(self, title: str) -> int:
         # Add new conversation, use default time
         cursor = self.conn.execute("INSERT INTO conversations (title) VALUES (?) RETURNING id", (title,))
         return cursor.fetchone()[0]
@@ -71,7 +71,7 @@ class LlamaCPPProvider(ModelProvider):
         row = self.conn.execute("SELECT 1 FROM conversations WHERE id = ? LIMIT 1", (conv_id,)).fetchone()
         return row is not None
 
-    def convert_conv(self, raw_conv):
+    def convert_conv(self, raw_conv) -> list[dict[str, str]]:
         # conversations are a tuple when retrieved, break it into dict with field 2 (role) and 3 (content)
         conversation = []
         for item in raw_conv:
