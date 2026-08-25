@@ -25,19 +25,31 @@ class LlamaCPPProvider(ModelProvider):
 
     @override
     def generate(self, prompt: PromptItem):
-        self.conversation.append({"role": "user", "content": prompt.prompt_text})
+        # self.conversation.append({"role": "user", "content": prompt.prompt_text})
+        conversation = []
+        if not self.conversation_exists(prompt.conversation_id):
+            conversation.append({"role": "system", "content": SYSTEM_PROMPT})
+            conversation.append({"role": "user", "content": prompt.prompt_text})
+            # TODO: Set up title generation
+            self.add_conversation(str(prompt.conversation_id))
+            self.add_message(prompt.conversation_id, "system", SYSTEM_PROMPT)
+            self.add_message(prompt.conversation_id, "user", prompt.prompt_text)
+        else:
+            conversation = self.convert_conv(self.retrieve_conversation(prompt.conversation_id))
+            conversation.append({"role": "user", "content": prompt.prompt_text})
+            self.add_message(prompt.conversation_id, "user", prompt.prompt_text)
         response = requests.post(
             "http://0.0.0.0:8080/v1/chat/completions",
             json={
                 "model": "google/gemma-4-E4B-it-qat-q4_0-gguf:IT",
-                "messages": self.conversation,
+                "messages": conversation,
                 "temperature": 0.7,
             }
         )
         assistant_message = response.json()["choices"][0]["message"]
 
-        self.conversation.append({"role": "assistant", "content": assistant_message["content"]})
-
+        conversation.append({"role": "assistant", "content": assistant_message["content"]})
+        self.add_message(prompt.conversation_id, "assistant", assistant_message["content"])
         return assistant_message["content"]
 
     def retrieve_conversation(self, conv_id: int):
@@ -58,3 +70,10 @@ class LlamaCPPProvider(ModelProvider):
         # Check if a conversation with the given ID exists
         row = self.conn.execute("SELECT 1 FROM conversations WHERE id = ? LIMIT 1", (conv_id,)).fetchone()
         return row is not None
+
+    def convert_conv(self, raw_conv):
+        # conversations are a tuple when retrieved, break it into dict with field 2 (role) and 3 (content)
+        conversation = []
+        for item in raw_conv:
+            conversation.append({"role": item[2], "content": item[3]})
+        return conversation
