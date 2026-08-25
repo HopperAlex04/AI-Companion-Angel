@@ -1,7 +1,7 @@
-from typing import override
+from typing import final, override
 import requests
 from sqlite3 import Connection
-from main import PromptItem
+from dtos import PromptItem
 
 # import os
 # import json
@@ -15,12 +15,12 @@ class ModelProvider:
         raise NotImplementedError("Subclasses must implement this method")
 
 class MockProvider(ModelProvider):
+    @override
     def generate(self, prompt: PromptItem):
-        return {"response": f"prompt recieved: {prompt.prompt_text}"}
+        return f"prompt recieved: {prompt.prompt_text}"
 
 class LlamaCPPProvider(ModelProvider):
     def __init__(self, conn: Connection):
-        self.conversation = [{"role": "system", "content": SYSTEM_PROMPT}]
         self.conn = conn
 
     @override
@@ -71,9 +71,9 @@ class LlamaCPPProvider(ModelProvider):
         row = self.conn.execute("SELECT 1 FROM conversations WHERE id = ? LIMIT 1", (conv_id,)).fetchone()
         return row is not None
 
-    def convert_conv(self, raw_conv) -> list[dict[str, str]]:
+    def convert_conv(self, raw_conv: list[tuple[str, str]]) -> list[dict[str, str]]:
         # conversations are a tuple when retrieved, break it into dict with field 2 (role) and 3 (content)
         conversation = []
         for item in raw_conv:
-            conversation.append({"role": item[2], "content": item[3]})
+            conversation.append({"role": item[0], "content": item[1]})
         return conversation

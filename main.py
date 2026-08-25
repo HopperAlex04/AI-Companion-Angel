@@ -1,17 +1,16 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
 from providers import MockProvider, LlamaCPPProvider
+from dtos import PromptItem
+import sqlite3
 
 app = FastAPI()
 mock = MockProvider()
-llamacpp = LlamaCPPProvider()
+conn = sqlite3.connect("chat.db")
+llamacpp = LlamaCPPProvider(conn)
 # client = OpenAI(
 #     base_url="http://0.0.0.0:8080",
 #     api_key="not-needed"
 # )
-
-class PromptItem(BaseModel):
-    prompt_text: str
 
 @app.get("/")
 async def root():
@@ -20,7 +19,7 @@ async def root():
 @app.post("/chat/mock")
 async def chatMock(prompt: PromptItem):
     provider = MockProvider()
-    return provider.generate(prompt.prompt_text)
+    return provider.generate(prompt)
 
 @app.post("/chat/angel")
 async def chatAngel(prompt:PromptItem):
@@ -33,5 +32,5 @@ async def chatAngel(prompt:PromptItem):
     #     max_tokens=256
     # )
     #
-    response = llamacpp.generate(prompt.prompt_text)
+    response = llamacpp.generate(prompt)
     return response
