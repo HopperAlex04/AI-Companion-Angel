@@ -43,11 +43,13 @@ class LlamaCPPProvider(ModelProvider):
     def retrieve_conversation(self, conv_id: int):
         # Grabs all messages, sorted by id, that belong to a conversation
         rows = self.conn.execute("select role, content from messages where conv_id = ? order by id", (conv_id,)).fetchall()
+        return rows
 
     def add_message(self, conv_id:int, role:str, message:str):
         # Add a meesage to a specified converstaion by adding an entry to the messages table
-        self.conn.execute("INSERT INTO messages (role, message, conv_id) values (?,?,?)", (role, message, conv_id,))
+        self.conn.execute("INSERT INTO messages (role, content, conv_id) values (?,?,?)", (role, message, conv_id,))
 
     def add_conversation(self, title:str):
         # Add new conversation, use default time
-        self.conn.execute("INSERT INTO conversations (title) values (?)", (title,))
+        cursor = self.conn.execute("INSERT INTO conversations (title) VALUES (?) RETURNING id", (title,))
+        return cursor.fetchone()[0]
