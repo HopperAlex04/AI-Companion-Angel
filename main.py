@@ -34,3 +34,7 @@ async def chatAngel(prompt:PromptItem):
     #
     response = llamacpp.generate(prompt)
     return response
+
+@app.get("/conversations")
+async def get_conversations():
+    return llamacpp.get_all_conversations()
