@@ -84,5 +84,5 @@ class LlamaCPPProvider(ModelProvider):
 
     def get_all_conversations(self) -> list[dict[str, Any]]:
         # Retrieve all conversations from the database
-        rows = self.conn.execute("SELECT id, title, created_at FROM conversations").fetchall()
+        rows = self.conn.execute("SELECT * FROM conversations").fetchall()
         return [{"id": row[0], "title": row[1], "created_at": row[2]} for row in rows]

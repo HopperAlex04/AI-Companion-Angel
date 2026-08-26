@@ -9,7 +9,7 @@ For detailed documentation and interactive usage of the API, visit the FastAPI d
 
 [existing content]
 
-# Run app (with ollama server running)
+# Run app (with llama server running)
 uvicorn main:app --reload
 
 

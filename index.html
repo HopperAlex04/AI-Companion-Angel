@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Angel Chat</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 1rem;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        select,
+        textarea,
+        button {
+            font-size: 1rem;
+            padding: 0.5rem;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        #response {
+            border: 1px solid #ccc;
+            padding: 1rem;
+            min-height: 100px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Angel Chat</h1>
+
+    <label for="conversationSelect">Conversation</label>
+    <select id="conversationSelect">
+        <option>Loading conversations...</option>
+    </select>
+
+    <label for="messageInput">Message</label>
+    <textarea
+        id="messageInput"
+        placeholder="Type your message here..."
+    ></textarea>
+
+    <button id="sendButton">Send</button>
+
+    <h3>Response</h3>
+    <div id="response"></div>
+</div>
+
+<script>
+const API_BASE = "http://127.0.0.1:8000";
+
+const conversationSelect = document.getElementById("conversationSelect");
+const messageInput = document.getElementById("messageInput");
+const sendButton = document.getElementById("sendButton");
+const responseDiv = document.getElementById("response");
+
+async function loadConversations() {
+    try {
+        const response = await fetch(`${API_BASE}/conversations`);
+        const conversations = await response.json();
+
+        conversationSelect.innerHTML = "";
+
+        conversations.forEach(conversation => {
+            const option = document.createElement("option");
+
+            option.value = conversation.id;
+            option.textContent =
+                `${conversation.title} (${conversation.created_at})`;
+
+            conversationSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error(error);
+
+        conversationSelect.innerHTML =
+            "<option>Failed to load conversations</option>";
+    }
+}
+
+async function sendMessage() {
+    const promptText = messageInput.value.trim();
+
+    if (!promptText) {
+        alert("Please enter a message.");
+        return;
+    }
+
+    const conversationId = parseInt(
+        conversationSelect.value,
+        10
+    );
+
+    responseDiv.textContent = "Thinking...";
+
+    try {
+        const response = await fetch(`${API_BASE}/chat/angel`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                prompt_text: promptText,
+                conversation_id: conversationId
+            })
+        });
+
+        const result = await response.json();
+
+        // If API returns plain string:
+        if (typeof result === "string") {
+            responseDiv.textContent = result;
+        }
+        // If API returns {"response":"..."}
+        else if (result.response) {
+            responseDiv.textContent = result.response;
+        }
+        else {
+            responseDiv.textContent =
+                JSON.stringify(result, null, 2);
+        }
+    } catch (error) {
+        console.error(error);
+        responseDiv.textContent =
+            "Failed to send message.";
+    }
+}
+
+sendButton.addEventListener("click", sendMessage);
+
+loadConversations();
+</script>
+
+</body>
+</html>
