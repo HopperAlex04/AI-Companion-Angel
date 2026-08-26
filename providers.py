@@ -81,3 +81,8 @@ class LlamaCPPProvider(ModelProvider):
         for item in raw_conv:
             conversation.append({"role": item[0], "content": item[1]})
         return conversation
+
+    def get_all_conversations(self) -> list[dict[str, Any]]:
+        # Retrieve all conversations from the database
+        rows = self.conn.execute("SELECT id, title, created_at FROM conversations").fetchall()
+        return [{"id": row[0], "title": row[1], "created_at": row[2]} for row in rows]
