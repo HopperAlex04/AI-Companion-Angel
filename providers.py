@@ -1,4 +1,4 @@
-from typing import final, override
+from typing import final, override, Any
 import requests
 from sqlite3 import Connection
 from dtos import PromptItem
