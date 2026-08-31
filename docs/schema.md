@@ -12,6 +12,9 @@
 - conversation_id: integer (FK → users.id)
 - role: text (not null)
 - content: text (not null)
+- metadata: text (nullable JSON)
+  - assistant tool-call turns: `{"tool_calls": [...]}`
+  - tool results: `{"tool_call_id": "...", "name": "web_search"}`
 
 ## Important notes / conventions
 - Always use parameterized queries

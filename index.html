@@ -48,7 +48,8 @@
     <select id="conversationSelect">
         <option>Loading conversations...</option>
     </select>
-
+    <textarea id="titleInput" placeholder="Type title for new conversation here..."></textarea>
+    <button id="createconvButton">Create</button>
     <label for="messageInput">Message</label>
     <textarea
         id="messageInput"
@@ -68,6 +69,8 @@ const conversationSelect = document.getElementById("conversationSelect");
 const messageInput = document.getElementById("messageInput");
 const sendButton = document.getElementById("sendButton");
 const responseDiv = document.getElementById("response");
+const titleInput = document.getElementById("titleInput")
+const createconvButton = document.getElementById("createconvButton")
 
 async function loadConversations() {
     try {
@@ -141,7 +144,30 @@ async function sendMessage() {
     }
 }
 
+async function addConv() {
+  const title = titleInput.value.trim();
+
+  if (!title) {
+      alert("Please enter a title.");
+      return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/conversations`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: title
+    });
+  } catch (error) {
+    console.error(error);
+    alert("Failed to add conversation.");
+  }
+  const id = await response.json();
+}
 sendButton.addEventListener("click", sendMessage);
+createconvButton.addEventListener("click", addConv);
 
 loadConversations();
 </script>

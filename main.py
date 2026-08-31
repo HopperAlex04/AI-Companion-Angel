@@ -2,12 +2,15 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from providers import MockProvider, LlamaCPPProvider
 from dtos import PromptItem
+from tools import ToolRegistry, WebSearchTool
 import sqlite3
 
 app = FastAPI()
 mock = MockProvider()
 conn = sqlite3.connect("chat.db")
-llamacpp = LlamaCPPProvider(conn)
+registry = ToolRegistry()
+registry.register(WebSearchTool())
+llamacpp = LlamaCPPProvider(conn, registry)
 
 @app.get("/")
 async def root():
@@ -27,4 +30,12 @@ async def chatAngel(prompt:PromptItem):
 @app.get("/conversations")
 async def get_conversations():
     # value is a list opf tuples conatining and int (id) a string (title) and a sqlite datetime value (created_at)
-    return llamacpp.get_all_conversations()
+    conversations = llamacpp.get_all_conversations()
+    for conversation in conversations:
+        print(conversation)
+    return conversations
+
+@app.post("/conversations")
+async def new_conversation(title:str):
+    id = llamacpp.add_conversation(title)
+    return id
