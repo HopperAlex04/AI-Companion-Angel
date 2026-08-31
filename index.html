@@ -63,7 +63,7 @@
 </div>
 
 <script>
-const API_BASE = "http://127.0.0.1:8000";
+let API_BASE = "";
 
 const conversationSelect = document.getElementById("conversationSelect");
 const messageInput = document.getElementById("messageInput");
@@ -71,6 +71,17 @@ const sendButton = document.getElementById("sendButton");
 const responseDiv = document.getElementById("response");
 const titleInput = document.getElementById("titleInput")
 const createconvButton = document.getElementById("createconvButton")
+
+async function loadConfig() {
+    try {
+        const response = await fetch("/config.json");
+        const cfg = await response.json();
+        API_BASE = cfg.api_base || "";
+    } catch (error) {
+        console.error(error);
+        API_BASE = "";
+    }
+}
 
 async function loadConversations() {
     try {
@@ -179,7 +190,7 @@ async function addConv() {
 sendButton.addEventListener("click", sendMessage);
 createconvButton.addEventListener("click", addConv);
 
-loadConversations();
+loadConfig().then(loadConversations);
 </script>
 
 </body>

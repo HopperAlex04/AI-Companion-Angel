@@ -4,18 +4,7 @@ import requests
 from sqlite3 import Connection
 from dtos import PromptItem
 from tools import ToolRegistry
-
-# import os
-# import json
-# import requests
-
-SYSTEM_PROMPT = '''You are Angel, AI companion and research assistant.
-You are designed to aid the user in designing AI systems by searching documentation, finding bugs, providing analysis of planned features and proposing implementations when requested
-Use web_search when facts may be stale or unknown. Do not search for casual conversation.'''
-
-MAX_TOOL_ROUNDS = 4
-LLAMA_CHAT_URL = "http://0.0.0.0:8080/v1/chat/completions"
-LLAMA_MODEL = "google/gemma-4-E4B-it-qat-q4_0-gguf:IT"
+from config import config
 
 
 class ModelProvider:
@@ -31,6 +20,12 @@ class LlamaCPPProvider(ModelProvider):
     def __init__(self, conn: Connection, registry: ToolRegistry | None = None):
         self.conn = conn
         self.registry = registry or ToolRegistry()
+        llama = config["llama"]
+        self.system_prompt = llama["system_prompt"]
+        self.max_tool_rounds = llama["max_tool_rounds"]
+        self.chat_url = llama["chat_url"]
+        self.model = llama["model"]
+        self.temperature = llama["temperature"]
         self._ensure_schema()
 
     @override
@@ -38,11 +33,11 @@ class LlamaCPPProvider(ModelProvider):
         # self.conversation.append({"role": "user", "content": prompt.prompt_text})
         conversation = []
         if not self.conversation_exists(prompt.conversation_id):
-            conversation.append({"role": "system", "content": SYSTEM_PROMPT})
+            conversation.append({"role": "system", "content": self.system_prompt})
             conversation.append({"role": "user", "content": prompt.prompt_text})
             # TODO: Set up title generation
             self.add_conversation(str(prompt.conversation_id))
-            self.add_message(prompt.conversation_id, "system", SYSTEM_PROMPT)
+            self.add_message(prompt.conversation_id, "system", self.system_prompt)
             self.add_message(prompt.conversation_id, "user", prompt.prompt_text)
         else:
             conversation = self.convert_conv(self.retrieve_conversation(prompt.conversation_id))
@@ -50,7 +45,7 @@ class LlamaCPPProvider(ModelProvider):
             conversation.append({"role": "user", "content": prompt.prompt_text})
             self.add_message(prompt.conversation_id, "user", prompt.prompt_text)
 
-        for _ in range(MAX_TOOL_ROUNDS):
+        for _ in range(self.max_tool_rounds):
             assistant_message = self._chat(conversation)
             content = assistant_message.get("content") or ""
             tool_calls = assistant_message.get("tool_calls") or []
@@ -99,14 +94,14 @@ class LlamaCPPProvider(ModelProvider):
 
     def _chat(self, messages: list[dict[str, Any]]) -> dict[str, Any]:
         payload: dict[str, Any] = {
-            "model": LLAMA_MODEL,
+            "model": self.model,
             "messages": messages,
-            "temperature": 0.7,
+            "temperature": self.temperature,
         }
         tools = self.registry.openai_tools()
         if tools:
             payload["tools"] = tools
-        response = requests.post(LLAMA_CHAT_URL, json=payload)
+        response = requests.post(self.chat_url, json=payload)
         response.raise_for_status()
         return response.json()["choices"][0]["message"]
 

@@ -1,0 +1,16 @@
+{
+  "database_path": "chat.db",
+  "api_base": "http://127.0.0.1:8000",
+  "llama": {
+    "chat_url": "http://0.0.0.0:8080/v1/chat/completions",
+    "models_url": "http://0.0.0.0:8080/v1/models",
+    "model": "google/gemma-4-E4B-it-qat-q4_0-gguf:IT",
+    "temperature": 0.7,
+    "max_tool_rounds": 4,
+    "system_prompt": "You are Angel, AI companion and research assistant.\nYou are designed to aid the user in designing AI systems by searching documentation, finding bugs, providing analysis of planned features and proposing implementations when requested\nUse web_search when facts may be stale or unknown. Do not search for casual conversation."
+  },
+  "web_search": {
+    "default_max_results": 5,
+    "max_results_cap": 8
+  }
+}

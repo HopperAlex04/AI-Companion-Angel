@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from typing import Any, Protocol, runtime_checkable
 
+from config import config
+
 try:
     from ddgs import DDGS
 except ImportError:
@@ -71,7 +73,11 @@ class WebSearchTool:
             },
             "max_results": {
                 "type": "integer",
-                "description": "Number of results to return (default 5, max 8)",
+                "description": (
+                    "Number of results to return "
+                    f"(default {config['web_search']['default_max_results']}, "
+                    f"max {config['web_search']['max_results_cap']})"
+                ),
             },
         },
         "required": ["query"],
@@ -82,12 +88,15 @@ class WebSearchTool:
         if not query:
             return "web_search failed: query is required"
 
-        max_results = arguments.get("max_results", 5)
+        search_cfg = config["web_search"]
+        default_max = search_cfg["default_max_results"]
+        cap = search_cfg["max_results_cap"]
+        max_results = arguments.get("max_results", default_max)
         try:
             max_results = int(max_results)
         except (TypeError, ValueError):
-            max_results = 5
-        max_results = max(1, min(max_results, 8))
+            max_results = default_max
+        max_results = max(1, min(max_results, cap))
 
         try:
             results = DDGS().text(query, max_results=max_results) or []

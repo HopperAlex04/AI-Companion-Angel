@@ -1,7 +1,11 @@
 import requests
+from pathlib import Path
+import json
 
-models = requests.get(
-    "http://0.0.0.0:8080/v1/models"
-).json()
+config_path = Path(__file__).resolve().parent.parent / "config.json"
+with config_path.open(encoding="utf-8") as file:
+    config = json.load(file)
+
+models = requests.get(config["llama"]["models_url"]).json()
 
 print(models)

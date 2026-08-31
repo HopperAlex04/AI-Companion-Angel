@@ -3,11 +3,12 @@ from fastapi.responses import FileResponse
 from providers import MockProvider, LlamaCPPProvider
 from dtos import PromptItem, ConversationCreate
 from tools import ToolRegistry, WebSearchTool
+from config import CONFIG_PATH, config
 import sqlite3
 
 app = FastAPI()
 mock = MockProvider()
-conn = sqlite3.connect("chat.db")
+conn = sqlite3.connect(config["database_path"])
 registry = ToolRegistry()
 registry.register(WebSearchTool())
 llamacpp = LlamaCPPProvider(conn, registry)
@@ -15,6 +16,10 @@ llamacpp = LlamaCPPProvider(conn, registry)
 @app.get("/")
 async def root():
     return FileResponse("index.html")
+
+@app.get("/config.json")
+async def get_config():
+    return FileResponse(CONFIG_PATH)
 
 @app.post("/chat/mock")
 async def chatMock(prompt: PromptItem):
