@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from providers import MockProvider, LlamaCPPProvider
-from dtos import PromptItem
+from dtos import PromptItem, ConversationCreate
 from tools import ToolRegistry, WebSearchTool
 import sqlite3
 
@@ -36,6 +36,6 @@ async def get_conversations():
     return conversations
 
 @app.post("/conversations")
-async def new_conversation(title:str):
-    id = llamacpp.add_conversation(title)
+async def new_conversation(payload: ConversationCreate):
+    id = llamacpp.add_conversation(payload.title)
     return id

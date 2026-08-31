@@ -158,13 +158,23 @@ async function addConv() {
         headers: {
             "Content-Type": "application/json"
         },
-        body: title
+        body: JSON.stringify({ title })
     });
+
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+    }
+
+    const id = await response.json();
+    titleInput.value = "";
+    await loadConversations();
+    if (id != null) {
+        conversationSelect.value = String(id);
+    }
   } catch (error) {
     console.error(error);
     alert("Failed to add conversation.");
   }
-  const id = await response.json();
 }
 sendButton.addEventListener("click", sendMessage);
 createconvButton.addEventListener("click", addConv);

@@ -111,18 +111,27 @@ class LlamaCPPProvider(ModelProvider):
         return response.json()["choices"][0]["message"]
 
     def _ensure_schema(self) -> None:
-        columns = [
+        message_columns = [
             row[1]
             for row in self.conn.execute("PRAGMA table_info(messages)").fetchall()
         ]
-        if "metadata" not in columns:
+        if "metadata" not in message_columns:
             self.conn.execute("ALTER TABLE messages ADD COLUMN metadata TEXT")
-            self.conn.commit()
+        if "deleted_at" not in message_columns:
+            self.conn.execute("ALTER TABLE messages ADD COLUMN deleted_at DATETIME")
+
+        conversation_columns = [
+            row[1]
+            for row in self.conn.execute("PRAGMA table_info(conversations)").fetchall()
+        ]
+        if "deleted_at" not in conversation_columns:
+            self.conn.execute("ALTER TABLE conversations ADD COLUMN deleted_at DATETIME")
+        self.conn.commit()
 
     def retrieve_conversation(self, conv_id: int) -> list[tuple[str, str | None, str | None]]:
         # Grabs all messages, sorted by id, that belong to a conversation
         rows = self.conn.execute(
-            "select role, content, metadata from messages where conversation_id = ? order by id",
+            "select role, content, metadata from messages where conversation_id = ? and deleted_at is null order by id",
             (conv_id,),
         ).fetchall()
         return rows
@@ -151,7 +160,10 @@ class LlamaCPPProvider(ModelProvider):
 
     def conversation_exists(self, conv_id: int) -> bool:
         # Check if a conversation with the given ID exists
-        row = self.conn.execute("SELECT 1 FROM conversations WHERE id = ? LIMIT 1", (conv_id,)).fetchone()
+        row = self.conn.execute(
+            "SELECT 1 FROM conversations WHERE id = ? AND deleted_at IS NULL LIMIT 1",
+            (conv_id,),
+        ).fetchone()
         return row is not None
 
     def convert_conv(
@@ -178,5 +190,7 @@ class LlamaCPPProvider(ModelProvider):
 
     def get_all_conversations(self) -> list[dict[str, Any]]:
         # Retrieve all conversations from the database
-        rows = self.conn.execute("SELECT * FROM conversations").fetchall()
+        rows = self.conn.execute(
+            "SELECT id, title, created_at FROM conversations WHERE deleted_at IS NULL"
+        ).fetchall()
         return [{"id": row[0], "title": row[1], "created_at": row[2]} for row in rows]
