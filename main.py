@@ -4,6 +4,7 @@ from providers import MockProvider, LlamaCPPProvider
 from dtos import PromptItem, ConversationCreate
 from tools import ToolRegistry, WebSearchTool
 from config import CONFIG_PATH, config
+import requests
 import sqlite3
 
 app = FastAPI()
@@ -29,18 +30,16 @@ async def chatMock(prompt: PromptItem):
 @app.post("/chat/angel")
 async def chatAngel(prompt:PromptItem):
     #response is a string
-    response = llamacpp.generate(prompt)
+    response = requests.post("http://localhost:8000/generate", json=prompt.model_dump())
     return response
 
 @app.get("/conversations")
 async def get_conversations():
-    # value is a list opf tuples conatining and int (id) a string (title) and a sqlite datetime value (created_at)
-    conversations = llamacpp.get_all_conversations()
-    for conversation in conversations:
-        print(conversation)
-    return conversations
+    conversations = requests.get("http://localhost:8000/conversations")
+    return conversations.json()
 
 @app.post("/conversations")
 async def new_conversation(payload: ConversationCreate):
-    id = llamacpp.add_conversation(payload.title)
+    response = requests.post("http://localhost:8000/conversations", json=payload.model_dump())
+    id = response.json()["id"]
     return id
