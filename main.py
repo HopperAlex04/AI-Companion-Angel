@@ -6,13 +6,12 @@ from tools import ToolRegistry, WebSearchTool
 from config import CONFIG_PATH, config
 import requests
 import sqlite3
+import httpx
 
 app = FastAPI()
 mock = MockProvider()
-conn = sqlite3.connect(config["database_path"])
-registry = ToolRegistry()
-registry.register(WebSearchTool())
-llamacpp = LlamaCPPProvider(conn, registry)
+client = httpx.AsyncClient(timeout=None)
+chat_service_url = config["chat_service_url"]
 
 @app.get("/")
 async def root():
@@ -30,16 +29,16 @@ async def chatMock(prompt: PromptItem):
 @app.post("/chat/angel")
 async def chatAngel(prompt:PromptItem):
     #response is a string
-    response = requests.post("http://localhost:8000/generate", json=prompt.model_dump())
-    return response
+    response = await client.post(f"{chat_service_url}/generate", json=prompt.model_dump())
+    return response.json()
 
 @app.get("/conversations")
 async def get_conversations():
-    conversations = requests.get("http://localhost:8000/conversations")
+    conversations = await client.get(f"{chat_service_url}/conversations")
     return conversations.json()
 
 @app.post("/conversations")
 async def new_conversation(payload: ConversationCreate):
-    response = requests.post("http://localhost:8000/conversations", json=payload.model_dump())
+    response = await client.post(f"{chat_service_url}/conversations", json=payload.model_dump())
     id = response.json()["id"]
-    return id
+    return {"id": id}

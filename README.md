@@ -12,7 +12,7 @@ For detailed documentation and interactive usage of the API, visit the FastAPI d
 # Run app (with llama server running)
 # llama-server must be started with --jinja so OpenAI-style tool calls work
 # (Gemma may use llama.cpp's generic tool handler if it has no native template)
-uvicorn main:app --reload
+uvicorn main:app --reload --port 8000 and uvicorn chat_service:app --reload --port 8001
 
 
 ## API Usage Instructions

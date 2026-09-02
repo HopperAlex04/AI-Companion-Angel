@@ -16,7 +16,7 @@ async def root():
     # Maybe it returns current job information?
     return {"message": "Hello World"}
 
-@app.get("/generate")
+@app.post("/generate")
 async def generate(prompt: PromptItem):
     return llamacpp.generate(prompt)
 
