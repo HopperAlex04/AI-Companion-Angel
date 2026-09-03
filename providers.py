@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import override, Any
 import json
 import requests
@@ -5,6 +6,10 @@ from sqlite3 import Connection
 from dtos import PromptItem
 from tools import ToolRegistry
 from config import config
+from db import init_schema
+
+# OpenAI-style assistant message dict returned by a chat completion.
+ChatFn = Callable[[list[dict[str, Any]]], dict[str, Any]]
 
 
 class ModelProvider:
@@ -17,7 +22,12 @@ class MockProvider(ModelProvider):
         return f"prompt recieved: {prompt.prompt_text}"
 
 class LlamaCPPProvider(ModelProvider):
-    def __init__(self, conn: Connection, registry: ToolRegistry | None = None):
+    def __init__(
+        self,
+        conn: Connection,
+        registry: ToolRegistry | None = None,
+        chat_fn: ChatFn | None = None,
+    ):
         self.conn = conn
         self.registry = registry or ToolRegistry()
         llama = config["llama"]
@@ -26,7 +36,8 @@ class LlamaCPPProvider(ModelProvider):
         self.chat_url = llama["chat_url"]
         self.model = llama["model"]
         self.temperature = llama["temperature"]
-        self._ensure_schema()
+        self._chat_fn = chat_fn
+        init_schema(self.conn)
 
     @override
     def generate(self, prompt: PromptItem) -> str:
@@ -93,6 +104,8 @@ class LlamaCPPProvider(ModelProvider):
         return content
 
     def _chat(self, messages: list[dict[str, Any]]) -> dict[str, Any]:
+        if self._chat_fn is not None:
+            return self._chat_fn(messages)
         payload: dict[str, Any] = {
             "model": self.model,
             "messages": messages,
@@ -104,24 +117,6 @@ class LlamaCPPProvider(ModelProvider):
         response = requests.post(self.chat_url, json=payload)
         response.raise_for_status()
         return response.json()["choices"][0]["message"]
-
-    def _ensure_schema(self) -> None:
-        message_columns = [
-            row[1]
-            for row in self.conn.execute("PRAGMA table_info(messages)").fetchall()
-        ]
-        if "metadata" not in message_columns:
-            self.conn.execute("ALTER TABLE messages ADD COLUMN metadata TEXT")
-        if "deleted_at" not in message_columns:
-            self.conn.execute("ALTER TABLE messages ADD COLUMN deleted_at DATETIME")
-
-        conversation_columns = [
-            row[1]
-            for row in self.conn.execute("PRAGMA table_info(conversations)").fetchall()
-        ]
-        if "deleted_at" not in conversation_columns:
-            self.conn.execute("ALTER TABLE conversations ADD COLUMN deleted_at DATETIME")
-        self.conn.commit()
 
     def retrieve_conversation(self, conv_id: int) -> list[tuple[str, str | None, str | None]]:
         # Grabs all messages, sorted by id, that belong to a conversation
